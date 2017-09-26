@@ -1,3 +1,0 @@
-[scrapy]
-settings = win007spider.settings
-

@@ -9,13 +9,11 @@ from datetime import date
 from urllib import parse
 import re
 from win007spider.items import Win007MatchItem, TakeFirstItemLoader,\
-    Win007HandicapSbItem, Win007HandicapBet365Item, Win007HandicapLadbrokesItem,\
-    Win007HandicapBetvictorItem
+    Win007HandicapSbItem
     
 
 from scrapy.http import Request
-
-from selenium import webdriver
+import sys
 
 class Win007Spider(scrapy.Spider):
     name = 'win007'
@@ -24,8 +22,8 @@ class Win007Spider(scrapy.Spider):
     start_urls = []
     #获取全部翻页链接
 
-    begin = date.fromtimestamp(int(time.mktime(time.strptime("2017-09-05", "%Y-%m-%d"))))    
-    end = date.fromtimestamp(int(time.mktime(time.strptime("2017-09-05", "%Y-%m-%d"))))    
+    begin = date.fromtimestamp(int(time.mktime(time.strptime("2017-09-03", "%Y-%m-%d"))))    
+    end = date.fromtimestamp(int(time.mktime(time.strptime("2017-09-03", "%Y-%m-%d"))))    
 
 #     end = date.today()
     
@@ -113,27 +111,28 @@ class Win007Spider(scrapy.Spider):
             
 
 
+            get_url = 'http://www.310win.com/handicap/' + matchId + '.html' #采集盘口水位地址
 #             print (get_url)
 #             print (cnHome)
 #             print (matchClass)
-            MatchItem = Win007MatchItem()
-            MatchItem["date"]=tdate
-            MatchItem["matchId"]=matchId
-            MatchItem["cnHome"]=cnHome
-            MatchItem["hkHome"]=hkHome
-            MatchItem["enHome"]=enHome
-            MatchItem["cnGuest"]=cnGuest
+            item_loader = Win007MatchItem()
+            item_loader["date"]=tdate
+            item_loader["matchId"]=matchId
+            item_loader["cnHome"]=cnHome
+            item_loader["hkHome"]=hkHome
+            item_loader["enHome"]=enHome
+            item_loader["cnGuest"]=cnGuest
              
-            MatchItem["hkGuest"]=hkGuest
-            MatchItem["enGuest"]=enGuest
-            MatchItem["matchTime"]=matchTime
-            MatchItem["homeGoal"]=homeGoal
+            item_loader["hkGuest"]=hkGuest
+            item_loader["enGuest"]=enGuest
+            item_loader["matchTime"]=matchTime
+            item_loader["homeGoal"]=homeGoal
              
-            MatchItem["guestGoal"]=guestGoal
-            MatchItem["matchHandicap"]=matchHandicap
-            MatchItem["matchClass"]=matchClass
-            MatchItem["homeRanking"]=homeRanking
-            MatchItem["guestRanking"]=guestRanking
+            item_loader["guestGoal"]=guestGoal
+            item_loader["matchHandicap"]=matchHandicap
+            item_loader["matchClass"]=matchClass
+            item_loader["homeRanking"]=homeRanking
+            item_loader["guestRanking"]=guestRanking
             
 #             item_loader = TakeFirstItemLoader(item=Win007MatchItem(), response=response)
 #             item_loader = Win007MatchItem()
@@ -155,52 +154,12 @@ class Win007Spider(scrapy.Spider):
 #             item_loader.add_value("guestRanking", guestRanking)
 #             item_loader = item_loader.load_item()
 
-            analysis_url="http://www.310win.com/analysis/"+matchId+".htm"#分析
+            yield scrapy.Request(get_url, headers=self.headers,callback=self.parse_detail,dont_filter=True)
+            yield item_loader
             
+#             yield Request(url=post_url, callback=self.parse_detail,dont_filter=True)
 
-            analysis_request = scrapy.Request(analysis_url,headers=self.headers,callback=self.parse_analysis,dont_filter=True)
-            analysis_request.meta['MatchItem'] = MatchItem
-            yield analysis_request
-            
 
-    def parse_analysis(self,response):
-        
-        if response.status==200:
-            browser = webdriver.PhantomJS()
-            browser.get(response.url)
-    #         response.text=browser.page_source
-            browser.implicitly_wait(1) 
-            
-            try:
-
-                homeWinrate=browser.find_element_by_css_selector("#table_h > tbody > tr:nth-child(13) > td > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(1) > td > font:nth-child(2)").text
-                guestWinrate=browser.find_element_by_css_selector("#table_a > tbody > tr:nth-child(13) > td > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(1) > td > font:nth-child(2)").text
-                homeWinrateTen=browser.find_element_by_css_selector("#table_h > tbody > tr:nth-child(13) > td > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(1) > td > font:nth-child(1)").text
-                guestWinrateTen=browser.find_element_by_css_selector("#table_a > tbody > tr:nth-child(13) > td > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(1) > td > font:nth-child(1)").text
-        
-                browser.quit()
-                
-                if homeWinrateTen=="10" and guestWinrateTen =="10":
-                    
-                    pattern = re.compile(u"[\u4e00-\u9fa5]+")
-                    homeWinrate=re.sub(pattern,'',homeWinrate)
-                    guestWinrate=re.sub(pattern,'',guestWinrate)
-                    
-                    MatchItem = response.meta['MatchItem']
-                    matchId=MatchItem["matchId"]
-                    MatchItem['homeWinrate']=int(homeWinrate or 0)
-                    MatchItem['guestWinrate']=int(guestWinrate or 0)
-                    yield MatchItem
-                    
-                   
-                    handicap_url = 'http://www.310win.com/handicap/' + matchId + '.html' #采集盘口水位地址
-                    yield scrapy.Request(handicap_url, headers=self.headers,callback=self.parse_detail,dont_filter=True)
-                else:
-                    pass
-                
-            except:
-                browser.quit()
-            
 
     def parse_detail(self, response):
         handicapUrl=parse.urlparse(response.url)
@@ -278,6 +237,7 @@ class Win007Spider(scrapy.Spider):
 #         else:
 #             continue;
         
+        size_url ='http://www.310win.com/overunder/'+matchId+'.html' #大小
         
         SbItem = Win007HandicapSbItem()
         SbItem["matchid"]=int(matchId)
@@ -289,43 +249,18 @@ class Win007Spider(scrapy.Spider):
         SbItem["asian_guestoverodds"]=sb_guestoverodds
         SbItem["asian_overhandicap"]=sb_overhandicap
         
-        Bet365Item = Win007HandicapBet365Item()
-        Bet365Item["matchid"]=int(matchId)
-        Bet365Item["company"]=bet365_company
-        Bet365Item["asian_homestartodds"]=bet365_homestartodds
-        Bet365Item["asian_gueststartodds"]=bet365_gueststartodds
-        Bet365Item["asian_starthandicap"]=bet365_starthandicap
-        Bet365Item["asian_homeoverodds"]=bet365_homeoverodds
-        Bet365Item["asian_guestoverodds"]=bet365_guestoverodds
-        Bet365Item["asian_overhandicap"]=bet365_overhandicap
+#         SbItem["size_homestartodds"]=sb_homestarsize
+#         SbItem["size_gueststartodds"]=sb_gueststarsize
+#         SbItem["size_starthandicap"]=sb_startsize
+#         SbItem["size_homeoverodds"]=sb_homeoversize
+#         SbItem["size_guestoverodds"]=sb_guestoversize
+#         SbItem["size_overhandicap"]=sb_oversize
+
+
+
         
-        LadbrokesItem=Win007HandicapLadbrokesItem()
-        LadbrokesItem["matchid"]=int(matchId)
-        LadbrokesItem["company"]=ladbrokes_company
-        LadbrokesItem["asian_homestartodds"]=ladbrokes_homestartodds
-        LadbrokesItem["asian_gueststartodds"]=ladbrokes_gueststartodds
-        LadbrokesItem["asian_starthandicap"]=ladbrokes_starthandicap
-        LadbrokesItem["asian_homeoverodds"]=ladbrokes_homeoverodds
-        LadbrokesItem["asian_guestoverodds"]=ladbrokes_guestoverodds
-        LadbrokesItem["asian_overhandicap"]=ladbrokes_overhandicap
-        
-        BetvictorItem=Win007HandicapBetvictorItem()
-        BetvictorItem["matchid"]=int(matchId)
-        BetvictorItem["company"]=betvictor_company
-        BetvictorItem["asian_homestartodds"]=betvictor_homestartodds
-        BetvictorItem["asian_gueststartodds"]=betvictor_gueststartodds
-        BetvictorItem["asian_starthandicap"]=betvictor_starthandicap
-        BetvictorItem["asian_homeoverodds"]=betvictor_homeoverodds
-        BetvictorItem["asian_guestoverodds"]=betvictor_guestoverodds
-        BetvictorItem["asian_overhandicap"]=betvictor_overhandicap
-        
-        
-        overunder_url ='http://www.310win.com/overunder/'+matchId+'.html' #大小
-        request = scrapy.Request(overunder_url,headers=self.headers,callback=self.parse_size,dont_filter=True)
+        request = scrapy.Request(size_url,headers=self.headers,callback=self.parse_size,dont_filter=True)
         request.meta['SbItem'] = SbItem
-        request.meta['Bet365Item'] = Bet365Item
-        request.meta['LadbrokesItem'] = LadbrokesItem
-        request.meta['BetvictorItem'] = BetvictorItem
         yield request
         
 #         yield scrapy.Request(get_url, headers=self.headers,callback=self.parse_detail,dont_filter=True)
@@ -364,6 +299,18 @@ class Win007Spider(scrapy.Spider):
         betvictor_homeoversize=response.css("#td_64::text").extract()[0]
         betvictor_guestoversize=response.css("#td_66::text").extract()[0]
         
+        
+#                 $sb_homeoversize = pq("#odds tr:eq(3) td:eq(4)")->text() * 1000; 
+#                 $sb_guestoversize = pq("#odds tr:eq(3) td:eq(6)")->text() * 1000; 
+#                 $bet365_homeoversize = pq("#odds tr:eq(5) td:eq(4)")->text() * 1000; 
+#                 $bet365_guestoversize = pq("#odds tr:eq(5) td:eq(6)")->text() * 1000; 
+#                 $ladbrokes_homeoversize = pq("#odds tr:eq(4) td:eq(4)")->text() * 1000; 
+#                 $ladbrokes_guestoversize = pq("#odds tr:eq(4) td:eq(6)")->text() * 1000; 
+#                 $betvictor_homeoversize = pq("#odds tr:eq(7) td:eq(4)")->text() * 1000; 
+#                 $betvictor_guestoversize = pq("#odds tr:eq(7) td:eq(6)")->text() * 1000; 
+
+
+        
         SbItem = response.meta['SbItem']
         SbItem["size_homestartodds"]=sb_homestarsize
         SbItem["size_gueststartodds"]=sb_gueststarsize
@@ -372,41 +319,12 @@ class Win007Spider(scrapy.Spider):
         SbItem["size_guestoverodds"]=sb_guestoversize
         SbItem["size_overhandicap"]=sb_oversize
         
-        Bet365Item = response.meta['Bet365Item']
-        Bet365Item["size_homestartodds"]=bet365_homestarsize
-        Bet365Item["size_gueststartodds"]=bet365_gueststarsize
-        Bet365Item["size_starthandicap"]=bet365_startsize
-        Bet365Item["size_homeoverodds"]=bet365_homeoversize
-        Bet365Item["size_guestoverodds"]=bet365_guestoversize
-        Bet365Item["size_overhandicap"]=bet365_oversize
-        
-        LadbrokesItem = response.meta['LadbrokesItem']
-        LadbrokesItem["size_homestartodds"]=ladbrokes_homestarsize
-        LadbrokesItem["size_gueststartodds"]=ladbrokes_gueststarsize
-        LadbrokesItem["size_starthandicap"]=ladbrokes_startsize
-        LadbrokesItem["size_homeoverodds"]=ladbrokes_homeoversize
-        LadbrokesItem["size_guestoverodds"]=ladbrokes_guestoversize
-        LadbrokesItem["size_overhandicap"]=ladbrokes_oversize
-        
-        BetvictorItem = response.meta['BetvictorItem']
-        BetvictorItem["size_homestartodds"]=betvictor_homestarsize
-        BetvictorItem["size_gueststartodds"]=betvictor_gueststarsize
-        BetvictorItem["size_starthandicap"]=betvictor_startsize
-        BetvictorItem["size_homeoverodds"]=betvictor_homeoversize
-        BetvictorItem["size_guestoverodds"]=betvictor_guestoversize
-        BetvictorItem["size_overhandicap"]=betvictor_oversize
-        
         yield SbItem
-        yield Bet365Item
-        yield LadbrokesItem
-        yield BetvictorItem
-        
-
         
         
 
 
-        
+    
 
     
     
