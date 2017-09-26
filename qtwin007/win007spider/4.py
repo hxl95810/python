@@ -26,8 +26,8 @@
  
 
 
-a='1'
+a=' '
 
 # a=int(a)
 
-print (  float(a or 0)  *10 )
+print (  int(a or 0)  *10 )

@@ -42,16 +42,13 @@ class Win007MatchItem(scrapy.Item):
     homeRanking=scrapy.Field()
     guestRanking=scrapy.Field()
 #     matchScroll=scrapy.Field()
-    homeWinrate=scrapy.Field()
-    guestWinrate=scrapy.Field()
-    
     def get_insert_sql(self):
         
         insert_sql="""
-            insert into think_match(date,matchId,matchHandicap,matchTime,matchClass,cnHome,hkHome,enHome,cnGuest,hkGuest,enGuest,homeGoal,guestGoal,homeRanking,guestRanking,homeWinrate,guestWinrate)
-            values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            insert into think_match(date,matchId,matchHandicap,matchTime,matchClass,cnHome,hkHome,enHome,cnGuest,hkGuest,enGuest,homeGoal,guestGoal,homeRanking,guestRanking)
+            values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """
-        params = (self["date"], self["matchId"], self["matchHandicap"], self["matchTime"], self["matchClass"], self["cnHome"], self["hkHome"], self["enHome"], self["cnGuest"], self["hkGuest"], self["enGuest"], self["homeGoal"], self["guestGoal"], self["homeRanking"], self["guestRanking"],self["homeWinrate"],self["guestWinrate"])
+        params = (self["date"], self["matchId"], self["matchHandicap"], self["matchTime"], self["matchClass"], self["cnHome"], self["hkHome"], self["enHome"], self["cnGuest"], self["hkGuest"], self["enGuest"], self["homeGoal"], self["guestGoal"], self["homeRanking"], self["guestRanking"])
         
         return insert_sql, params
     
